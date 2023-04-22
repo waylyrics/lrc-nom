@@ -93,8 +93,7 @@ pub fn parse<'a>(lyric: &'a str, lf: &str) -> Result<Vec<LrcItem<'a>>, LrcParseE
                     _minute => {
                         for (_left_sq, minute, _semicon, sec, _right_sq) in tags {
                             let millisec = Decimal::from_str_exact(sec)
-                                .map_err(|_| LrcParseError::InvalidTimestamp(i))
-                                .unwrap()
+                                .map_err(|_| LrcParseError::InvalidTimestamp(i))?
                                 * dec!(1000);
                             let timestamp = minute
                                 .parse::<i64>()
