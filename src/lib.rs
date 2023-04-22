@@ -2,7 +2,7 @@ use nom::IResult;
 use rust_decimal::prelude::ToPrimitive;
 use thiserror::Error;
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum LrcMetadata<'a> {
     /// Artist of the song
     Artist(&'a str),
@@ -24,7 +24,7 @@ pub enum LrcMetadata<'a> {
     AppVersion(&'a str),
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum LrcItem<'a> {
     Metadata(LrcMetadata<'a>),
     /// Lyric text and timestamp in milliseconds without offset
