@@ -2,6 +2,7 @@ use nom::IResult;
 use rust_decimal::prelude::ToPrimitive;
 use thiserror::Error;
 
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum LrcMetadata<'a> {
     /// Artist of the song
     Artist(&'a str),
@@ -23,6 +24,7 @@ pub enum LrcMetadata<'a> {
     AppVersion(&'a str),
 }
 
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum LrcItem<'a> {
     Metadata(LrcMetadata<'a>),
     /// Lyric text and timestamp in milliseconds without offset
@@ -60,9 +62,12 @@ pub fn parse<'a>(lyric: &'a str, lf: &str) -> Result<Vec<LrcItem<'a>>, LrcParseE
     let mut lrc_items = Vec::new();
 
     for (i, line) in lyric.split(lf).filter(|l| !l.is_empty()).enumerate() {
-        match tag_parser(line) {
+        let parse_result: IResult<&str, Vec<(&str, &str, &str, &str, &str)>> = tag_parser(line);
+        match parse_result {
             Ok((text, tags)) => match tags[0] {
-                ("[", attr, ":", content, "]") => match attr.trim() {
+                // `[:]` is considered as comment line
+                (_left_sq, "", _semicon, "", _right_sq) => continue,
+                (_left_sq, attr, _semicon, content, _right_sq) => match attr.trim() {
                     "ar" => lrc_items.push(LrcItem::Metadata(LrcMetadata::Artist(content.trim()))),
                     "al" => lrc_items.push(LrcItem::Metadata(LrcMetadata::Album(content.trim()))),
                     "ti" => lrc_items.push(LrcItem::Metadata(LrcMetadata::Title(content.trim()))),
