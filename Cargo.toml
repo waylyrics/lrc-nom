@@ -4,6 +4,7 @@ version = "0.1.1"
 edition = "2021"
 license = "MIT"
 description = "Simple zero-copy LRC parser wrote with nom"
+homepage = "https://github.com/poly000/lrc-nom"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
