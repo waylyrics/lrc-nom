@@ -41,7 +41,7 @@ pub enum LrcParseError {
     InvalidOffset(usize),
 }
 
-pub fn parse<'a>(lyric: &'a str, lf: &str) -> Result<Vec<LrcItem<'a>>, LrcParseError> {
+pub fn parse<'a>(lyric_lines: impl Iterator<Item = &'a str>) -> Result<Vec<LrcItem<'a>>, LrcParseError> {
     use nom::{
         bytes::complete::{tag, take_until},
         multi::many1,
@@ -61,7 +61,7 @@ pub fn parse<'a>(lyric: &'a str, lf: &str) -> Result<Vec<LrcItem<'a>>, LrcParseE
 
     let mut lrc_items = Vec::new();
 
-    for (i, line) in lyric.split(lf).filter(|l| !l.is_empty()).enumerate() {
+    for (i, line) in lyric_lines.filter(|l| !l.is_empty()).enumerate() {
         let parse_result: IResult<&str, Vec<(&str, &str, &str, &str, &str)>> = tag_parser(line);
         match parse_result {
             Ok((text, tags)) => match tags[0] {
@@ -90,21 +90,26 @@ pub fn parse<'a>(lyric: &'a str, lf: &str) -> Result<Vec<LrcItem<'a>>, LrcParseE
                     "ve" => {
                         lrc_items.push(LrcItem::Metadata(LrcMetadata::AppVersion(content.trim())))
                     }
-                    _minute => {
-                        for (_left_sq, minute, _semicon, sec, _right_sq) in tags {
-                            let millisec = Decimal::from_str_exact(&sec.replace(":", "."))
-                                .map_err(|_| LrcParseError::InvalidTimestamp(i))?
-                                * dec!(1000);
-                            let timestamp = minute
-                                .parse::<i64>()
-                                .map_err(|_| LrcParseError::InvalidTimestamp(i))?
-                                * 60
-                                * 1000
-                                + millisec.to_i64().unwrap();
+                    _minute if _minute.parse::<i64>().is_ok() => lrc_items.extend(
+                        tags.into_iter()
+                            .map(|(_left_sq, minute, _semicon, sec, _right_sq)| {
+                                let millisec = Decimal::from_str_exact(&sec.replace(':', "."))
+                                    .map_err(|_| LrcParseError::InvalidTimestamp(i))?
+                                    * dec!(1000);
+                                let timestamp = minute
+                                    .parse::<i64>()
+                                    .map_err(|_| LrcParseError::InvalidTimestamp(i))?
+                                    * 60
+                                    * 1000
+                                    + millisec
+                                        .to_i64()
+                                        .ok_or(LrcParseError::InvalidTimestamp(i))?;
 
-                            lrc_items.push(LrcItem::Lyric(text, timestamp));
-                        }
-                    }
+                                Ok::<LrcItem<'_>, LrcParseError>(LrcItem::Lyric(text, timestamp))
+                            })
+                            .flatten(), // Errors in parsing are ignored
+                    ),
+                    _ => (), // ignores unrecognised tags
                 },
             },
             Err(_) => return Err(LrcParseError::NoTagInNonEmptyLine(i)),
