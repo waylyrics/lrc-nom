@@ -22,6 +22,8 @@ pub enum LrcMetadata<'a> {
     Application(&'a str),
     /// version of the app above
     AppVersion(&'a str),
+    /// Comments
+    Comment(&'a str),
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -41,7 +43,9 @@ pub enum LrcParseError {
     InvalidOffset(usize),
 }
 
-pub fn parse<'a>(lyric_lines: impl Iterator<Item = &'a str>) -> Result<Vec<LrcItem<'a>>, LrcParseError> {
+pub fn parse<'a>(
+    lyric_lines: impl Iterator<Item = &'a str>,
+) -> Result<Vec<LrcItem<'a>>, LrcParseError> {
     use nom::{
         bytes::complete::{tag, take_until},
         multi::many1,
@@ -90,6 +94,7 @@ pub fn parse<'a>(lyric_lines: impl Iterator<Item = &'a str>) -> Result<Vec<LrcIt
                     "ve" => {
                         lrc_items.push(LrcItem::Metadata(LrcMetadata::AppVersion(content.trim())))
                     }
+                    "#" => lrc_items.push(LrcItem::Metadata(LrcMetadata::Comment(content.trim()))),
                     _minute if _minute.parse::<i64>().is_ok() => lrc_items.extend(
                         tags.into_iter()
                             .map(|(_left_sq, minute, _semicon, sec, _right_sq)| {
